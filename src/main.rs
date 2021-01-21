@@ -5,8 +5,8 @@ mod server;
 mod helper;
 mod threadpool;
 
-use crate::client::{run_client};
-use crate::server::{run_server};
+use crate::client::{Client};
+use crate::server::{Server};
 use crate::helper::{setopts, parse_args, Mode};
 
 
@@ -16,7 +16,7 @@ fn main() {
     let mode = parse_args(&args, opts);
 
     match mode {
-        Mode::Server(port) => run_server(port),
-        Mode::Client(host, port) => run_client(host, port)
+        Mode::Server(port) => Server::run_server(port),
+        Mode::Client(host, port) => Client::run_client(host, port)
     }
 }
