@@ -3,6 +3,7 @@ use std::env;
 mod client;
 mod server;
 mod helper;
+mod threadpool;
 
 use crate::client::{run_client};
 use crate::server::{run_server};

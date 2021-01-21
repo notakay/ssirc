@@ -2,15 +2,16 @@ use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::str::{from_utf8};
 
+use crate::threadpool::{ThreadPool};
+
 pub fn run_server(port: usize) {
     let addr = format!("127.0.0.1:{}", port);
     let listener = TcpListener::bind(addr).unwrap();
+    let pool = ThreadPool::new(2);
 
     for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => handle_connection(stream), // handle on a different thread??
-            Err(e) => println!("{:?}", e),
-        }
+        let stream = stream.unwrap();
+        pool.execute ( || handle_connection(stream) );
     }
 }
 
