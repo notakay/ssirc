@@ -2,7 +2,9 @@ use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::str::{from_utf8};
 use std::sync::{mpsc};
-use std::thread;
+use std::{thread, time};
+
+use bus::{Bus, BusReader};
 
 use crate::threadpool::{ThreadPool};
 
@@ -15,28 +17,41 @@ impl Server {
         let pool = ThreadPool::new(2);
         let (sender, receiver) = mpsc::channel();
 
-        thread::spawn( || Server::watcher(receiver));
+        let mut bus = Bus::new(10);
+        let mut bus_rx_handlers = Vec::with_capacity(10);
+        for _ in 0..10 {
+            bus_rx_handlers.push(bus.add_rx());
+        }
+        
+        thread::spawn( move || Server::watcher(receiver, bus));
 
         for stream in listener.incoming() {
             let stream = stream.unwrap();
             let sender = mpsc::Sender::clone(&sender);
-            pool.execute ( || Server::handle_connection(stream, sender) );
+            if let Some(bus_rx) = bus_rx_handlers.pop() {
+                pool.execute ( || Server::handle_connection(stream, sender, bus_rx) );
+            }
         }
     }
 
-    fn watcher(receiver: mpsc::Receiver<String>) {
+    fn watcher(receiver: mpsc::Receiver<String>, mut bus_tx: Bus<String>) {
         for received in receiver {
-            print!("> {}", received);
+            thread::sleep(time::Duration::from_secs(2));
+            print!("Broadcasting {}", received);
+            bus_tx.broadcast(received);
         }
     }
 
-    fn handle_connection(mut stream: TcpStream, sender: mpsc::Sender<String>) {
+    fn handle_connection(mut stream: TcpStream, sender: mpsc::Sender<String>, mut bus_rx: BusReader<String>) {
         let mut buf = [0; 128];
         loop {
             let size = stream.read(&mut buf).unwrap();
             let message = from_utf8(&buf[0..size]).unwrap().to_string();
             sender.send(message).unwrap();
-            stream.write(&buf[0..size]).unwrap();
+            
+            let message = bus_rx.recv().unwrap();
+            stream.write(message.as_bytes()).unwrap();
+            //stream.write(&buf[0..size]).unwrap();
             buf = [0; 128];
         }
     }
