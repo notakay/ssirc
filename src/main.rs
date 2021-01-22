@@ -16,7 +16,10 @@ fn main() {
     let mode = parse_args(&args, opts);
 
     match mode {
-        Mode::Server(port) => Server::run_server(port),
+        Mode::Server(port) => {
+            let mut server = Server::new();
+            server.run_server(port)
+        },
         Mode::Client(host, port) => Client::run_client(host, port)
     }
 }
