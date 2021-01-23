@@ -18,7 +18,8 @@ fn main() {
     match mode {
         Mode::Server(port) => {
             let mut server = Server::new();
-            server.run_server(port)
+            server.run_server(port);
+            server.run_relay();
         },
         Mode::Client(host, port) => Client::run_client(host, port)
     }
