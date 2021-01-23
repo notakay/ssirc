@@ -49,13 +49,20 @@ impl Server {
 
     fn handle_connection(mut stream: TcpStream, sender: mpsc::Sender<String>, mut bus_rx: BusReader<String>) {
         let mut buf = [0; 128];
+
+        {
+            let mut stream = stream.try_clone().unwrap();
+            thread::spawn (move || loop {
+                let message = bus_rx.recv().unwrap();
+                stream.write(message.as_bytes()).unwrap();
+                
+            });
+        }
+
         loop {
             let size = stream.read(&mut buf).unwrap();
             let message = from_utf8(&buf[0..size]).unwrap().to_string();
             sender.send(message).unwrap();
-            
-            let message = bus_rx.recv().unwrap();
-            stream.write(message.as_bytes()).unwrap();
             buf = [0; 128];
         }
     }
