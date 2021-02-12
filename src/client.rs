@@ -16,7 +16,8 @@ impl Client {
             let mut buf = [0; 128];
             thread::spawn(move || loop {
                 let size = stream.read(&mut buf).unwrap();
-                print!("> {}", from_utf8(&buf[0..size]).unwrap());
+                let message = from_utf8(&buf[0..size]).unwrap();
+                print!("{}", message);
                 buf = [0; 128];
             });
         }

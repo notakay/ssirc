@@ -29,10 +29,15 @@ impl Server {
         let bus_tx = Arc::clone(&self.bus_tx);
         let mpsc_tx = self.mpsc_tx.clone();
         thread::spawn(move || {
+            let mut client_id = 1;
             for stream in listener.incoming() {
                 let mpsc_tx = mpsc_tx.clone();
                 let bus_rx = bus_tx.lock().unwrap().add_rx();
-                pool.execute(|| Server::handle_connection(stream.unwrap(), mpsc_tx, bus_rx));
+                {
+                    let client_id = client_id.clone();
+                    pool.execute(move || Server::handle_connection(stream.unwrap(), mpsc_tx, bus_rx, client_id));
+                }
+                client_id = client_id + 1;
             }
         });
     }
@@ -47,7 +52,7 @@ impl Server {
         }
     }
 
-    fn handle_connection(mut stream: TcpStream, sender: mpsc::Sender<String>, mut bus_rx: BusReader<String>) {
+    fn handle_connection(mut stream: TcpStream, sender: mpsc::Sender<String>, mut bus_rx: BusReader<String>, client_id: u32) {
         let mut buf = [0; 128];
 
         {
@@ -62,6 +67,7 @@ impl Server {
         loop {
             let size = stream.read(&mut buf).unwrap();
             let message = from_utf8(&buf[0..size]).unwrap().to_string();
+            let message = format!("[Client {}] {}", client_id, message);
             sender.send(message).unwrap();
             buf = [0; 128];
         }
